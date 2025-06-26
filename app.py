@@ -175,7 +175,8 @@ def auto_check_images(status_container):
     return False
 
 def main():
-    st.title("J-Genix Studio")
+    st.title("🎨 J-Genix Studio - FREE AI Creative Suite")
+    st.markdown("**Professional image generation, logo creation, and AI copywriting - completely free!**")
 
     initialize_session_state()
 
@@ -188,31 +189,22 @@ def main():
     # Sidebar with app info
     with st.sidebar:
         st.header("🎨 J-Genix Studio")
+        st.success("🎉 **All Features FREE!**")
+        st.caption("Professional AI-powered creative suite")
 
-        # Show app status
-        if st.session_state.api_key:
-            st.success("✅ **All Features Available**")
-            st.caption("🖼️ Image Generation • 🎨 Logo Creation • 📝 AI Copywriter")
-        else:
-            st.warning("⚠️ **Limited Features**")
-            st.caption("📝 Free AI Copywriter available • Image features require setup")
-
-        # App info
+        # Feature list
         st.markdown("---")
-        st.subheader("🆓 Free Features")
-        st.success("✅ **AI Copywriter** - No limits!")
+        st.subheader("✨ Available Features")
+        st.success("✅ **HD Image Generation**")
+        st.success("✅ **Logo Creation**")
+        st.success("✅ **AI Copywriter**")
         st.success("✅ **Brand Kit Management**")
-        st.success("✅ **Copy Variations**")
+        st.success("✅ **Image Editing Tools**")
+        st.success("✅ **Lifestyle Shots**")
+        st.success("✅ **Background Removal**")
 
-        st.subheader("🎨 Premium Features")
-        if st.session_state.api_key:
-            st.success("✅ **HD Image Generation**")
-            st.success("✅ **Logo Creation**")
-            st.success("✅ **Image Editing**")
-        else:
-            st.info("🔒 **HD Image Generation**")
-            st.info("🔒 **Logo Creation**")
-            st.info("🔒 **Image Editing**")
+        st.markdown("---")
+        st.info("🚀 **No API keys required!** All features powered by professional AI models.")
 
     # Check if navigation was triggered - ensure in-app navigation
     if st.session_state.get('navigate_to_logo_tab'):
@@ -277,8 +269,7 @@ def main():
                         disabled=st.session_state.direct_logo_enhancement_in_progress):
                 if not logo_prompt:
                     st.warning("Please enter your company name and preferences to enhance.")
-                elif not st.session_state.api_key:
-                    st.error("Please enter your API key in the sidebar.")
+
                 else:
                     st.session_state.direct_logo_enhancement_in_progress = True
                     with st.spinner("Enhancing logo prompt..."):
@@ -352,9 +343,6 @@ def main():
 
         # Generate Logo button
         if st.button("🎨 Generate Logo", type="primary", key="direct_generate_logo_btn", use_container_width=True):
-            if not st.session_state.api_key:
-                st.error("Please enter your API key in the sidebar.")
-                return
 
             if not logo_prompt:
                 st.error("Please enter your company or brand name.")
@@ -613,9 +601,6 @@ def main():
         
         # Generate button
         if st.button("🎨 Generate Images", type="primary"):
-            if not st.session_state.api_key:
-                st.error("Please enter your API key in the sidebar.")
-                return
                 
             with st.spinner("🎨 Generating your masterpiece..."):
                 try:
@@ -767,8 +752,7 @@ def main():
                         disabled=st.session_state.logo_enhancement_in_progress):
                 if not logo_prompt:
                     st.warning("Please enter your company name and preferences to enhance.")
-                elif not st.session_state.api_key:
-                    st.error("Please enter your API key in the sidebar.")
+
                 else:
                     st.session_state.logo_enhancement_in_progress = True
                     with st.spinner("Enhancing logo prompt..."):
@@ -843,9 +827,6 @@ def main():
 
         # Generate Logo button
         if st.button("🎨 Generate Logo", type="primary", key="generate_logo_btn"):
-            if not st.session_state.api_key:
-                st.error("Please enter your API key in the sidebar.")
-                return
 
             if not logo_prompt:
                 st.error("Please enter your company or brand name.")
