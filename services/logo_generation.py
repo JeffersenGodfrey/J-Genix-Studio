@@ -144,14 +144,19 @@ def _build_logo_prompt(base_prompt: str, style: str, logo_type: str, color_schem
         "luxury": "luxury colors, gold and black, premium palette"
     }
     
-    # Build the enhanced prompt
+    # Extract company name for better text accuracy
+    company_name = base_prompt.split()[0] if base_prompt else "Company"
+
+    # Build the enhanced prompt with emphasis on text accuracy
     prompt_parts = [
-        f"professional logo design for {base_prompt}",
+        f"professional logo design for '{company_name}'",
+        f"company name '{company_name}' clearly readable",
         style_modifiers.get(style, "modern, clean"),
         type_modifiers.get(logo_type, "combination mark"),
         color_modifiers.get(color_scheme, "professional color palette"),
         "vector style, scalable, brand identity, commercial use",
         "high quality, crisp edges, professional branding",
+        "clear typography, readable text, accurate spelling",
         "suitable for business cards and websites"
     ]
     
@@ -165,7 +170,9 @@ def _build_logo_negative_prompt(base_negative: str) -> str:
         "cluttered", "busy", "complex background", "photographic",
         "realistic photo", "3D render", "overly detailed",
         "multiple logos", "watermark", "copyright",
-        "text overlay", "frame", "border"
+        "text overlay", "frame", "border",
+        "misspelled text", "incorrect spelling", "garbled text",
+        "unreadable text", "distorted letters", "broken typography"
     ]
     
     if base_negative:

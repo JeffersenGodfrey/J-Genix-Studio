@@ -72,7 +72,8 @@ def initialize_session_state():
     """Initialize session state variables."""
     if 'api_key' not in st.session_state:
         # Get API key from environment or Streamlit secrets
-        st.session_state.api_key = get_api_key()
+        api_key = get_api_key()
+        st.session_state.api_key = api_key
     if 'generated_images' not in st.session_state:
         st.session_state.generated_images = []
     if 'current_image' not in st.session_state:
@@ -81,6 +82,11 @@ def initialize_session_state():
         st.session_state.pending_urls = []
     if 'edited_image' not in st.session_state:
         st.session_state.edited_image = None
+    # Separate session state for different tabs
+    if 'logo_image' not in st.session_state:
+        st.session_state.logo_image = None
+    if 'hd_generated_image' not in st.session_state:
+        st.session_state.hd_generated_image = None
     if 'original_prompt' not in st.session_state:
         st.session_state.original_prompt = ""
     if 'enhanced_prompt' not in st.session_state:
@@ -403,7 +409,7 @@ def main():
                                     logo_url = first_item
 
                         if logo_url:
-                            st.session_state.edited_image = logo_url
+                            st.session_state.logo_image = logo_url
                             st.success("✨ Logo generated successfully!")
 
                             # Show navigation back to Brand Kit
@@ -441,7 +447,7 @@ def main():
             st.subheader("✨ Generated Logo")
             col_logo1, col_logo2 = st.columns([1, 2])
             with col_logo1:
-                st.image(st.session_state.edited_image, caption="Your Logo", width=200)
+                st.image(st.session_state.logo_image, caption="Your Logo", width=200)
             with col_logo2:
                 st.success("✨ Logo generated successfully!")
                 st.markdown("**Next Steps:**")
@@ -499,7 +505,7 @@ def main():
             st.session_state.active_brand_kit = None
 
         # Check if there's a generated logo
-        if st.session_state.get('edited_image'):
+        if st.session_state.get('logo_image'):
             st.success("✅ Logo detected! Ready to create your brand kit.")
 
             # Brand Kit Creation Form
@@ -512,7 +518,7 @@ def main():
                 if brand_name and st.button("🎯 Create Brand Kit", type="primary", key="direct_brand_kit_create"):
                     with st.spinner("Creating brand kit and extracting colors..."):
                         try:
-                            brand_kit = create_brand_kit(st.session_state.edited_image, brand_name, brand_tagline)
+                            brand_kit = create_brand_kit(st.session_state.logo_image, brand_name, brand_tagline)
                             if brand_kit and save_brand_kit(brand_kit):
                                 st.success(f"✨ Brand kit '{brand_name}' created successfully!")
                                 st.balloons()
@@ -522,7 +528,7 @@ def main():
                             st.error(f"Error creating brand kit: {str(e)}")
 
             with col2:
-                st.image(st.session_state.edited_image, caption="Your Logo", width=200)
+                st.image(st.session_state.logo_image, caption="Your Logo", width=200)
         else:
             st.info("No logo detected. Please generate a logo first.")
             if st.button("🏢 Go to Logo Generation", key="nav_to_logo_from_brand_kit"):
@@ -572,6 +578,10 @@ def main():
             
             # Enhance Prompt button
             if st.button("✨ Enhance Prompt", key="enhance_button"):
+                if not st.session_state.api_key:
+                    st.error("🔑 Service temporarily unavailable. Please try again later.")
+                    return
+
                 if not prompt:
                     st.warning("Please enter a prompt to enhance.")
                 else:
@@ -582,8 +592,10 @@ def main():
                                 st.session_state.enhanced_prompt = result
                                 st.success("Prompt enhanced!")
                                 st.rerun()  # Rerun to update the display
+                            else:
+                                st.warning("Unable to enhance prompt. Please try again.")
                         except Exception as e:
-                            st.error(f"Error enhancing prompt: {str(e)}")
+                            st.error(f"Enhancement failed. Please try again later.")
                             
 
         
@@ -601,7 +613,14 @@ def main():
         
         # Generate button
         if st.button("🎨 Generate Images", type="primary"):
-                
+            if not st.session_state.api_key:
+                st.error("🔑 Service temporarily unavailable. Please try again later.")
+                return
+
+            if not prompt:
+                st.warning("Please enter a prompt to generate images.")
+                return
+
             with st.spinner("🎨 Generating your masterpiece..."):
                 try:
                     # Build final prompt with style
@@ -657,13 +676,13 @@ def main():
                     )
                     
                     if result:
+                        try:
+                            if isinstance(result, dict):
+                                image_url = None
 
-                        if isinstance(result, dict):
-                            image_url = None
-
-                            # Try different response formats
-                            if "urls" in result and result["urls"]:
-                                image_url = result["urls"][0]
+                                # Try different response formats
+                                if "urls" in result and result["urls"]:
+                                    image_url = result["urls"][0]
                             elif "result_url" in result:
                                 image_url = result["result_url"]
                             elif "result_urls" in result and result["result_urls"]:
@@ -680,15 +699,17 @@ def main():
                                     image_url = result_data
 
                             if image_url:
-                                st.session_state.edited_image = image_url
+                                st.session_state.hd_generated_image = image_url
                                 st.success("🎨 Image generated successfully!")
                             else:
                                 st.error("No valid image URL found in the API response. Please try again.")
                         else:
                             st.error("Invalid API response format.")
+                        except Exception as e:
+                            st.error(f"Error processing image result: {str(e)}")
                     else:
                         st.error("No result received from the API.")
-                            
+
                 except Exception as e:
                     st.error(f"Error generating images: {str(e)}")
 
@@ -703,7 +724,35 @@ def main():
                     else:
                         st.info("💡 **General Error:** Please try again or contact support if the issue persists.")
 
+        # Display generated HD image (only in this tab)
+        if st.session_state.hd_generated_image:
+            st.markdown("---")
+            st.subheader("🎨 Generated HD Image")
 
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.image(st.session_state.hd_generated_image, caption="🎨 Generated HD Image", use_container_width=True)
+
+            with col2:
+                # Download button
+                image_data = download_image(st.session_state.hd_generated_image)
+                if image_data:
+                    st.download_button(
+                        "⬇️ Download Image",
+                        image_data,
+                        "hd_generated_image.png",
+                        "image/png",
+                        key="hd_download"
+                    )
+
+                # Additional actions
+                if st.button("🔄 Generate Another", key="hd_generate_another"):
+                    st.session_state.hd_generated_image = None
+                    st.rerun()
+
+                if st.button("📋 Copy URL", key="hd_copy_url"):
+                    st.code(st.session_state.hd_generated_image)
+                    st.success("URL copied to display!")
 
     # Logo Generation Tab
     with tabs[1]:
@@ -887,7 +936,7 @@ def main():
                                     logo_url = first_item
 
                         if logo_url:
-                            st.session_state.edited_image = logo_url
+                            st.session_state.logo_image = logo_url
                             st.success("✨ Logo generated successfully!")
 
                             # Brand Kit navigation helper
@@ -908,6 +957,36 @@ def main():
                         st.info("💡 Try simplifying your prompt or using the enhancement feature.")
                     else:
                         st.info("💡 Please try again or contact support if the issue persists.")
+
+        # Display generated logo (only in this tab)
+        if st.session_state.logo_image:
+            st.markdown("---")
+            st.subheader("🎨 Generated Logo")
+
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.image(st.session_state.logo_image, caption="🎨 Generated Logo", use_container_width=True)
+
+            with col2:
+                # Download button
+                image_data = download_image(st.session_state.logo_image)
+                if image_data:
+                    st.download_button(
+                        "⬇️ Download Logo",
+                        image_data,
+                        "generated_logo.png",
+                        "image/png",
+                        key="logo_download"
+                    )
+
+                # Additional actions
+                if st.button("🔄 Generate Another Logo", key="logo_generate_another"):
+                    st.session_state.logo_image = None
+                    st.rerun()
+
+                if st.button("📋 Copy URL", key="logo_copy_url"):
+                    st.code(st.session_state.logo_image)
+                    st.success("URL copied to display!")
 
     # Brand Kit Tab
     with tabs[2]:
@@ -954,19 +1033,19 @@ def main():
                 # Logo Generation Path
                 if logo_source == "Generate New Logo":
                     # Check if there's a generated logo in session
-                    if st.session_state.get('edited_image'):
+                    if st.session_state.get('logo_image'):
                         # Logo Available - Show Preview and Creation Option
                         st.success("✅ Logo ready for brand kit creation!")
 
                         # Compact logo preview
                         logo_col1, logo_col2 = st.columns([1, 2])
                         with logo_col1:
-                            st.image(st.session_state.edited_image, caption="Generated Logo", width=120)
+                            st.image(st.session_state.logo_image, caption="Generated Logo", width=120)
                         with logo_col2:
                             st.markdown("**Your logo is ready!**")
                             st.caption("Fill in the brand name above and create your brand kit.")
 
-                        logo_url = st.session_state.edited_image
+                        logo_url = st.session_state.logo_image
 
                         # Create brand kit button
                         if brand_name.strip():
@@ -979,8 +1058,8 @@ def main():
                                                 st.success(f"✨ Brand kit '{brand_name}' created successfully!")
                                                 st.balloons()
                                                 # Clear the form
-                                                if 'edited_image' in st.session_state:
-                                                    del st.session_state['edited_image']
+                                                if 'logo_image' in st.session_state:
+                                                    del st.session_state['logo_image']
                                                 st.rerun()
                                             else:
                                                 st.error("Failed to save brand kit")
@@ -1969,35 +2048,7 @@ def main():
                 st.markdown("• Generate variations to compare different approaches")
                 st.markdown("• Experiment with different tones and lengths")
 
-    # Display generated images section (shared across all tabs)
-    if st.session_state.edited_image:
-        st.markdown("---")
-        st.subheader("🎨 Generated Image")
 
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.image(st.session_state.edited_image, caption="🎨 Generated Image", use_container_width=True)
-
-        with col2:
-            # Download button
-            image_data = download_image(st.session_state.edited_image)
-            if image_data:
-                st.download_button(
-                    "⬇️ Download Image",
-                    image_data,
-                    "generated_image.png",
-                    "image/png",
-                    key="main_download"
-                )
-
-            # Additional actions
-            if st.button("🔄 Generate Another", key="generate_another"):
-                st.session_state.edited_image = None
-                st.rerun()
-
-            if st.button("📋 Copy URL", key="copy_url"):
-                st.code(st.session_state.edited_image)
-                st.success("URL copied to display!")
 
 
 
