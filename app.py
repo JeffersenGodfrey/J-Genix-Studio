@@ -71,7 +71,8 @@ api_key = get_api_key()
 def initialize_session_state():
     """Initialize session state variables."""
     if 'api_key' not in st.session_state:
-        st.session_state.api_key = os.getenv('BRIA_API_KEY')
+        # Get API key from environment or Streamlit secrets
+        st.session_state.api_key = get_api_key()
     if 'generated_images' not in st.session_state:
         st.session_state.generated_images = []
     if 'current_image' not in st.session_state:
@@ -184,17 +185,34 @@ def main():
     if 'active_tab_index' not in st.session_state:
         st.session_state.active_tab_index = 0
 
-    # Sidebar for API key
+    # Sidebar with app info
     with st.sidebar:
-        st.header("Settings")
-        api_key = st.text_input("Bria AI API Key:", value=st.session_state.api_key if st.session_state.api_key else "", type="password")
-        if api_key:
-            st.session_state.api_key = api_key
+        st.header("🎨 J-Genix Studio")
 
-        # Free AI Copywriter info
-        st.subheader("🆓 Free AI Copywriter")
-        st.success("✅ **No setup required!** Free copywriter powered by Hugging Face models.")
-        st.caption("Generate marketing copy for your images without any API keys or costs.")
+        # Show app status
+        if st.session_state.api_key:
+            st.success("✅ **All Features Available**")
+            st.caption("🖼️ Image Generation • 🎨 Logo Creation • 📝 AI Copywriter")
+        else:
+            st.warning("⚠️ **Limited Features**")
+            st.caption("📝 Free AI Copywriter available • Image features require setup")
+
+        # App info
+        st.markdown("---")
+        st.subheader("🆓 Free Features")
+        st.success("✅ **AI Copywriter** - No limits!")
+        st.success("✅ **Brand Kit Management**")
+        st.success("✅ **Copy Variations**")
+
+        st.subheader("🎨 Premium Features")
+        if st.session_state.api_key:
+            st.success("✅ **HD Image Generation**")
+            st.success("✅ **Logo Creation**")
+            st.success("✅ **Image Editing**")
+        else:
+            st.info("🔒 **HD Image Generation**")
+            st.info("🔒 **Logo Creation**")
+            st.info("🔒 **Image Editing**")
 
     # Check if navigation was triggered - ensure in-app navigation
     if st.session_state.get('navigate_to_logo_tab'):
