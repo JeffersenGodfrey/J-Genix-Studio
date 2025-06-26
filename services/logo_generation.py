@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional, List
 import requests
 import json
 import random
+import re
 
 def generate_logo(
     prompt: str,
@@ -49,6 +50,10 @@ def generate_logo(
     if not prompt:
         raise ValueError("Prompt is required for logo generation")
     
+    # Extract company name for accurate text rendering
+    company_name = _extract_company_name(prompt)
+    print(f"Logo generation for company: '{company_name}'")
+
     # Build logo-specific prompt with style and type modifiers
     enhanced_prompt = _build_logo_prompt(prompt, logo_style, logo_type, color_scheme)
     
@@ -112,9 +117,93 @@ def generate_logo(
     except Exception as e:
         raise Exception(f"Logo generation failed: {str(e)}")
 
+def _extract_company_name(prompt: str) -> str:
+    """Extract the company name from the user prompt with advanced parsing"""
+
+    if not prompt or not prompt.strip():
+        return "Company"
+
+    # Clean the prompt
+    cleaned_prompt = prompt.strip()
+
+    # Special case: If it's a single word that looks like a company name, use it directly
+    words = cleaned_prompt.split()
+    if len(words) == 1 and len(words[0]) > 1 and words[0].isalpha():
+        return words[0]
+
+    # Pattern 1: Look for quoted company names
+    quoted_match = re.search(r'["\']([^"\']+)["\']', cleaned_prompt)
+    if quoted_match:
+        return quoted_match.group(1).strip()
+
+    # Pattern 2: Look for "company name is X" or "brand name is X"
+    name_pattern = re.search(r'(?:company|brand|business)\s+(?:name|called)\s+(?:is\s+)?([A-Za-z0-9\s&]+?)(?:\s|,|$)', cleaned_prompt, re.IGNORECASE)
+    if name_pattern:
+        return name_pattern.group(1).strip()
+
+    # Pattern 3: Look for "for X company" or "for X brand"
+    for_pattern = re.search(r'for\s+([A-Za-z0-9\s&]+?)\s+(?:company|brand|business|corp|inc|llc)', cleaned_prompt, re.IGNORECASE)
+    if for_pattern:
+        return for_pattern.group(1).strip()
+
+    # Pattern 4: Extract first 1-3 words that could be company names
+    words = cleaned_prompt.split()
+    company_words = []
+
+    for word in words[:5]:  # Check first 5 words
+        # Skip common descriptive words
+        if word.lower() in ['logo', 'design', 'for', 'company', 'brand', 'business', 'create', 'make', 'generate', 'a', 'an', 'the']:
+            continue
+
+        # Accept any word that could be a company name (including lowercase)
+        if len(word) > 1 and word.isalpha():
+            company_words.append(word)
+        else:
+            break  # Stop at first non-alphabetic word
+
+    if company_words:
+        company_name = ' '.join(company_words[:3])  # Max 3 words
+        # Clean up common suffixes
+        company_name = re.sub(r'\s+(inc|llc|corp|ltd|co)\.?$', '', company_name, flags=re.IGNORECASE)
+        return company_name.strip()
+
+    # Pattern 5: Fallback - take first word if it's reasonable length
+    first_word = words[0] if words else "Company"
+    if len(first_word) > 1 and first_word.isalpha():
+        return first_word
+
+    return "Company"
+
+def validate_company_name_extraction(prompt: str) -> Dict[str, str]:
+    """Validate and debug company name extraction"""
+    extracted_name = _extract_company_name(prompt)
+
+    return {
+        "original_prompt": prompt,
+        "extracted_company_name": extracted_name,
+        "extraction_method": _get_extraction_method(prompt),
+        "is_valid": len(extracted_name) > 0 and extracted_name != "Company"
+    }
+
+def _get_extraction_method(prompt: str) -> str:
+    """Determine which method was used to extract the company name"""
+    if not prompt or not prompt.strip():
+        return "empty_prompt"
+
+    cleaned_prompt = prompt.strip()
+
+    if re.search(r'["\']([^"\']+)["\']', cleaned_prompt):
+        return "quoted_name"
+    elif re.search(r'(?:company|brand|business)\s+(?:name|called)\s+(?:is\s+)?([A-Za-z0-9\s&]+?)(?:\s|,|$)', cleaned_prompt, re.IGNORECASE):
+        return "explicit_name_pattern"
+    elif re.search(r'for\s+([A-Za-z0-9\s&]+?)\s+(?:company|brand|business|corp|inc|llc)', cleaned_prompt, re.IGNORECASE):
+        return "for_company_pattern"
+    else:
+        return "capitalized_words"
+
 def _build_logo_prompt(base_prompt: str, style: str, logo_type: str, color_scheme: str) -> str:
-    """Build an enhanced prompt specifically optimized for logo generation"""
-    
+    """Build an enhanced prompt specifically optimized for logo generation with accurate text rendering"""
+
     # Style modifiers
     style_modifiers = {
         "modern": "modern, clean, contemporary, sleek",
@@ -144,20 +233,24 @@ def _build_logo_prompt(base_prompt: str, style: str, logo_type: str, color_schem
         "luxury": "luxury colors, gold and black, premium palette"
     }
     
-    # Extract company name for better text accuracy
-    company_name = base_prompt.split()[0] if base_prompt else "Company"
+    # Extract company name with advanced parsing
+    company_name = _extract_company_name(base_prompt)
 
-    # Build the enhanced prompt with emphasis on text accuracy
+    # Build the enhanced prompt with maximum emphasis on text accuracy
     prompt_parts = [
-        f"professional logo design for '{company_name}'",
-        f"company name '{company_name}' clearly readable",
+        f"professional logo design with text '{company_name}'",
+        f"exact text '{company_name}' spelled correctly",
+        f"company name '{company_name}' in clear readable typography",
+        f"text '{company_name}' must be spelled exactly as written",
         style_modifiers.get(style, "modern, clean"),
         type_modifiers.get(logo_type, "combination mark"),
         color_modifiers.get(color_scheme, "professional color palette"),
-        "vector style, scalable, brand identity, commercial use",
-        "high quality, crisp edges, professional branding",
-        "clear typography, readable text, accurate spelling",
-        "suitable for business cards and websites"
+        "vector style logo design, scalable graphics",
+        "professional typography, clear letterforms",
+        "accurate text rendering, perfect spelling",
+        "crisp text edges, high contrast lettering",
+        "business logo, corporate branding",
+        "text must be legible and correctly spelled"
     ]
     
     return ", ".join(prompt_parts)
@@ -166,13 +259,27 @@ def _build_logo_negative_prompt(base_negative: str) -> str:
     """Build negative prompt to avoid common logo generation issues"""
     
     logo_negative_terms = [
-        "blurry", "pixelated", "low quality", "distorted",
+        # Quality issues
+        "blurry", "pixelated", "low quality", "distorted", "fuzzy",
         "cluttered", "busy", "complex background", "photographic",
         "realistic photo", "3D render", "overly detailed",
         "multiple logos", "watermark", "copyright",
-        "text overlay", "frame", "border",
+
+        # Text and typography issues
         "misspelled text", "incorrect spelling", "garbled text",
-        "unreadable text", "distorted letters", "broken typography"
+        "unreadable text", "distorted letters", "broken typography",
+        "wrong spelling", "scrambled letters", "illegible text",
+        "corrupted text", "malformed letters", "text artifacts",
+        "gibberish text", "nonsense words", "random characters",
+        "backwards text", "upside down text", "rotated letters",
+        "overlapping text", "cut off text", "partial letters",
+        "blurred text", "faded text", "unclear lettering",
+        "wrong font", "inconsistent typography", "mixed fonts",
+
+        # Layout issues
+        "text overlay", "frame", "border", "multiple text elements",
+        "scattered text", "floating letters", "disconnected text",
+        "text outside logo", "misaligned text", "cropped text"
     ]
     
     if base_negative:

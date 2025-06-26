@@ -676,13 +676,12 @@ def main():
                     )
                     
                     if result:
-                        try:
-                            if isinstance(result, dict):
-                                image_url = None
+                        if isinstance(result, dict):
+                            image_url = None
 
-                                # Try different response formats
-                                if "urls" in result and result["urls"]:
-                                    image_url = result["urls"][0]
+                            # Try different response formats
+                            if "urls" in result and result["urls"]:
+                                image_url = result["urls"][0]
                             elif "result_url" in result:
                                 image_url = result["result_url"]
                             elif "result_urls" in result and result["result_urls"]:
@@ -692,7 +691,7 @@ def main():
                                 if isinstance(result_data, list) and len(result_data) > 0:
                                     first_item = result_data[0]
                                     if isinstance(first_item, dict) and "urls" in first_item:
-                                        image_url = first_item["urls"][0]
+                                        image_url = result["urls"][0]
                                     elif isinstance(first_item, str):
                                         image_url = first_item
                                 elif isinstance(result_data, str):
@@ -705,8 +704,6 @@ def main():
                                 st.error("No valid image URL found in the API response. Please try again.")
                         else:
                             st.error("Invalid API response format.")
-                        except Exception as e:
-                            st.error(f"Error processing image result: {str(e)}")
                     else:
                         st.error("No result received from the API.")
 
